@@ -1,0 +1,40 @@
+# LifeTracer 项目依赖包
+# 核心Web框架
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# 数据验证和序列化
+pydantic==2.8.2
+
+# HTTP客户端
+aiohttp==3.9.1
+
+# 文件异步操作
+aiofiles==23.2.0
+
+# HTML解析
+beautifulsoup4==4.12.2
+lxml==4.9.3
+
+# 开发工具（可选）
+livereload==2.6.3
+
+# 日志处理（内置logging模块已足够，但可以添加更强大的日志库）
+# loguru==0.7.2  # 可选的更强大日志库
+
+# 如果需要地图可视化功能（基于test.py中的导入）
+# 注意：这些包比较大，如果不需要地图功能可以注释掉
+# arcgis==2.2.0
+# osmnx==1.7.1
+# matplotlib==3.8.2
+# geopandas==0.14.1
+# numpy==1.25.2
+# pandas==2.1.4
+# shapely==2.0.2
+# geopy==2.4.1
+# contextily==1.4.0
+
+# 生产环境推荐的额外包
+gunicorn==21.2.0  # 生产环境WSGI服务器
+python-multipart==0.0.6  # 处理表单数据
+python-dotenv==1.0.0  # 环境变量管理

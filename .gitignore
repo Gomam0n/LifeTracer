@@ -2,4 +2,3 @@
 **/logs/
 **/__pycache__/
 test*
-start_dev.py
