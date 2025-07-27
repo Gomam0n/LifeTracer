@@ -14,7 +14,6 @@ aiofiles==23.2.0
 
 # HTML解析
 beautifulsoup4==4.12.2
-lxml==4.9.3
 
 # 开发工具（可选）
 livereload==2.6.3
