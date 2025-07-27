@@ -134,30 +134,6 @@ def print_startup_info(config, host, port, is_prod):
     print(f"📚 API文档: http://{host}:{port}/docs")
     print(f"🔧 配置: {config.config_file}")
     
-    # 检查关键配置
-    llm_provider = config.get('llm.default_provider')
-    geocoding_provider = config.get('geocoding.default_provider')
-    
-    print(f"🤖 LLM提供商: {llm_provider}")
-    print(f"📍 地理编码: {geocoding_provider}")
-    
-    # 检查API密钥
-    api_keys = {
-        'OpenAI': config.get('llm.openai.api_key'),
-        'Claude': config.get('llm.claude.api_key'),
-        '通义千问': config.get('llm.qwen.api_key'),
-        '智谱AI': config.get('llm.zhipu.api_key'),
-        '高德地图': config.get('geocoding.amap.api_key'),
-        '百度地图': config.get('geocoding.baidu.api_key'),
-        'Google Maps': config.get('geocoding.google.api_key')
-    }
-    
-    configured_apis = [name for name, key in api_keys.items() if key]
-    if configured_apis:
-        print(f"🔑 已配置API: {', '.join(configured_apis)}")
-    else:
-        print("⚠️  未配置任何API密钥，部分功能可能受限")
-    
     print("="*50 + "\n")
 
 def main():
@@ -178,9 +154,9 @@ def main():
     config = init_config(args.config)
     
     # 确定运行参数
-    host = args.host or config.get('app.host', '0.0.0.0')
-    port = args.port or config.get('app.port', 8000)
-    is_prod = args.prod or (not args.dev and not config.get('app.debug', False))
+    host = args.host 
+    port = args.port 
+    is_prod = args.prod or (not args.dev)
     
     # 打印启动信息
     print_startup_info(config, host, port, is_prod)
