@@ -1,5 +1,6 @@
 // LifeTracer 前端应用主要逻辑
-const API_BASE_URL = 'http://localhost:8000';
+// 自动获取当前主机地址，支持前后端一体化部署
+const API_BASE_URL = window.location.origin;
 
 /**
  * 获取人物生平轨迹数据

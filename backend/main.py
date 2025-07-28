@@ -1,8 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import uvicorn
+import os
+from pathlib import Path
 from services.biography_service import BiographyService
 from models.response_models import (
     BiographyResponse,
@@ -12,6 +16,16 @@ app = FastAPI(
     description="历史名人生平足迹可视化API",
     version="1.0.0"
 )
+
+# 获取前端文件路径
+current_dir = Path(__file__).parent
+frontend_dir = current_dir.parent / "frontend"
+
+# 挂载静态文件服务
+if frontend_dir.exists():
+    app.mount("/css", StaticFiles(directory=str(frontend_dir / "css")), name="css")
+    app.mount("/js", StaticFiles(directory=str(frontend_dir / "js")), name="js")
+    app.mount("/static", StaticFiles(directory=str(frontend_dir)), name="static")
 
 # 配置CORS
 app.add_middleware(
@@ -37,7 +51,16 @@ class LocationRequest(BaseModel):
 
 @app.get("/")
 async def root():
-    return {"message": "LifeTracer API is running"}
+    """
+    返回前端主页
+    """
+    frontend_dir = Path(__file__).parent.parent / "frontend"
+    index_file = frontend_dir / "index.html"
+    
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    else:
+        return {"message": "LifeTracer API is running", "error": "Frontend files not found"}
 
 @app.post("/api/biography", response_model=BiographyResponse)
 async def get_biography(request: PersonRequest):
