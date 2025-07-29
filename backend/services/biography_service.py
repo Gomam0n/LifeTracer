@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import aiohttp
-import re
-from typing import Dict, List, Optional, Any
-from datetime import datetime
+from typing import Dict, List, Any
 import json
 from bs4 import BeautifulSoup
 import sys
@@ -97,21 +95,21 @@ class BiographyService:
                 "srlimit": 5
             }
             
-            print(f"正在搜索维基百科: {name}")
-            print(f"搜索URL: {search_url}")
-            print(f"搜索参数: {search_params}")
+            logger.debug(f"正在搜索维基百科: {name}")
+            logger.debug(f"搜索URL: {search_url}")
+            logger.debug(f"搜索参数: {search_params}")
             
             async with session.get(search_url, params=search_params) as response:
                 search_data = await response.json()
             
-            print(f"搜索结果: {json.dumps(search_data, ensure_ascii=False, indent=2)}")
+            logger.debug(f"搜索结果: {json.dumps(search_data, ensure_ascii=False, indent=2)}")
             
             if not search_data.get("query", {}).get("search"):
                 raise Exception(f"在维基百科中未找到 {name} 的相关信息")
             
             # 获取最相关的页面标题
             page_title = search_data["query"]["search"][0]["title"]
-            print(f"找到页面: {page_title}")
+            logger.debug(f"找到页面: {page_title}")
             
             # 2. 获取页面内容
             content_params = {
@@ -121,7 +119,7 @@ class BiographyService:
                 "prop": "sections|text",
             }
             
-            print(f"获取页面内容参数: {content_params}")
+            logger.debug(f"获取页面内容参数: {content_params}")
             
             async with session.get(search_url, params=content_params) as response:
                 content_data = await response.json()     
@@ -132,7 +130,7 @@ class BiographyService:
             elif isinstance(html_text, str):
                 html_content = html_text
             else:
-                print(f"意外的text类型: {type(html_text)}")
+                logger.debug(f"意外的text类型: {type(html_text)}")
                 html_content = str(html_text)
             biography_section = self.extract_h2_section_content(html_content, "生平")
             if not biography_section:
@@ -160,14 +158,14 @@ class BiographyService:
             # 查找目标h2标签，可能被包装在div中
             target_h2 = soup.find('h2', {'id': target_h2_id})
             if not target_h2:
-                print(f"未找到id为'{target_h2_id}'的h2标签")
+                logger.debug(f"未找到id为'{target_h2_id}'的h2标签")
                 return ""
             
-            print(f"找到目标h2标签: {target_h2.get_text()}")
+            logger.debug(f"找到目标h2标签: {target_h2.get_text()}")
             
             # 找到h2标签的父容器（可能是div）
             h2_container = target_h2.parent
-            print(f"h2容器标签: {h2_container.name if h2_container else 'None'}")
+            logger.debug(f"h2容器标签: {h2_container.name if h2_container else 'None'}")
             
             # 收集从h2容器之后到下一个h2容器之间的所有内容
             content_elements = []
@@ -176,12 +174,12 @@ class BiographyService:
             while current_element:
                 # 检查是否遇到下一个h2标签（可能在div中或直接的h2）
                 if current_element.name == 'h2':
-                    print(f"遇到下一个h2标签: {current_element.get_text()}")
+                    logger.debug(f"遇到下一个h2标签: {current_element.get_text()}")
                     break
                 elif current_element.name == 'div' and current_element.find('h2'):
                     # 检查div中是否包含h2标签
                     next_h2 = current_element.find('h2')
-                    print(f"遇到包含h2的div: {next_h2.get_text()}")
+                    logger.debug(f"遇到包含h2的div: {next_h2.get_text()}")
                     break
                 
                 # 收集有效的内容元素
@@ -189,7 +187,7 @@ class BiographyService:
                     content_elements.append(current_element)
                 
                 current_element = current_element.next_sibling
-                print(current_element)
+                logger.debug(current_element)
             
             # 提取文本内容
             extracted_text = ""
@@ -203,13 +201,13 @@ class BiographyService:
                     if text:
                         extracted_text += text + "\n\n"
             
-            print(f"提取的内容长度: {len(extracted_text)}")
-            print(f"内容预览: {extracted_text[:200]}...")
+            logger.debug(f"提取的内容长度: {len(extracted_text)}")
+            logger.debug(f"内容预览: {extracted_text[:200]}...")
             
             return extracted_text.strip()
             
         except Exception as e:
-            print(f"提取h2章节内容失败: {str(e)}")
+            logger.debug(f"提取h2章节内容失败: {str(e)}")
             return ""
     
     async def search_suggestions(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
@@ -290,17 +288,17 @@ async def test_wikipedia_api():
     service = BiographyService()
     
     try:
-        print("=== 测试维基百科API ===")
+        logger.info("=== 测试维基百科API ===")
         # 测试搜索功能
         suggestions = await service.search_suggestions("苏轼")
-        print(f"搜索建议: {suggestions}")
+        logger.info(f"搜索建议: {suggestions}")
         
         # 测试获取维基百科数据
         wiki_data = await service._get_wikipedia_data("苏轼", "zh")
-        print(f"维基百科数据获取成功")
+        logger.info(f"维基百科数据获取成功")
         
     except Exception as e:
-        print(f"维基百科API测试失败: {e}")
+        logger.error(f"维基百科API测试失败: {e}")
     finally:
         await service.close()
 
@@ -310,7 +308,7 @@ async def test_llm_enhancement():
     service = BiographyService()
     
     try:
-        print("\n=== 测试LLM增强 ===")
+        logger.info("\n=== 测试LLM增强 ===")
         # 模拟维基百科数据
         mock_wiki_data = {
             "title": "李白",
@@ -320,10 +318,10 @@ async def test_llm_enhancement():
         }
         
         enhanced_data = await service._enhance_with_llm(mock_wiki_data, "medium")
-        print(f"LLM增强成功: {json.dumps(enhanced_data, ensure_ascii=False, indent=2)}")
+        logger.info(f"LLM增强成功: {json.dumps(enhanced_data, ensure_ascii=False, indent=2)}")
         
     except Exception as e:
-        print(f"LLM增强测试失败: {e}")
+        logger.error(f"LLM增强测试失败: {e}")
     finally:
         await service.close()
 
@@ -333,18 +331,18 @@ async def test_full_biography():
     service = BiographyService()
     
     try:
-        print("\n=== 测试完整传记获取 ===")
+        logger.info("\n=== 测试完整传记获取 ===")
         biography = await service.get_biography("李白", "zh", "medium")
-        print(biography)
+        logger.info(biography)
     except Exception as e:
-        print(f"完整传记测试失败: {e}")
+        logger.error(f"完整传记测试失败: {e}")
     finally:
         await service.close()
 
 
 
 if __name__ == "__main__":
-    print("BiographyService 测试程序")
+    logger.info("BiographyService 测试程序")
     
     choice = "1"
     

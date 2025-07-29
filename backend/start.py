@@ -21,6 +21,9 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
+from utils.logger import get_logger
+logger = get_logger(__name__)
+
 def parse_args():
     """解析命令行参数"""
     parser = argparse.ArgumentParser(description='LifeTracer Backend Server')
@@ -100,18 +103,18 @@ def check_dependencies():
             missing_packages.append(package)
     
     if missing_packages:
-        print(f"❌ 缺少以下依赖包: {', '.join(missing_packages)}")
-        print("请运行: pip install -r requirements.txt")
+        logger.error(f"❌ 缺少以下依赖包: {', '.join(missing_packages)}")
+        logger.error("请运行: pip install -r requirements.txt")
         sys.exit(1)
     
-    print("✅ 所有依赖包已安装")
+    logger.info("✅ 所有依赖包已安装")
 
 def check_config(config_file):
     """检查配置文件"""
     if not os.path.exists(config_file):
-        print("⚠️  配置文件不存在，将使用默认配置")
+        logger.warning("⚠️  配置文件不存在，将使用默认配置")
     else:
-        print(f"✅ 使用配置文件: {config_file}")
+        logger.info(f"✅ 使用配置文件: {config_file}")
 
 def setup_environment():
     """设置环境"""
@@ -121,20 +124,20 @@ def setup_environment():
     for directory in directories:
         if not os.path.exists(directory):
             os.makedirs(directory)
-            print(f"📁 创建目录: {directory}")
+            logger.info(f"📁 创建目录: {directory}")
 
 def print_startup_info(config, host, port, is_prod):
     """打印启动信息"""
     mode = "生产模式" if is_prod else "开发模式"
     
-    print("\n" + "="*50)
-    print(f"🚀 LifeTracer Backend 启动中...")
-    print(f"📋 模式: {mode}")
-    print(f"🌐 地址: http://{host}:{port}")
-    print(f"📚 API文档: http://{host}:{port}/docs")
-    print(f"🔧 配置: {config.config_file}")
+    logger.info("\n" + "="*50)
+    logger.info(f"🚀 LifeTracer Backend 启动中...")
+    logger.info(f"📋 模式: {mode}")
+    logger.info(f"🌐 地址: http://{host}:{port}")
+    logger.info(f"📚 API文档: http://{host}:{port}/docs")
+    logger.info(f"🔧 配置: {config.config_file}")
     
-    print("="*50 + "\n")
+    logger.info("="*50 + "\n")
 
 def main():
     """主函数"""
@@ -187,7 +190,7 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n👋 服务器已停止")
+        logger.info("\n👋 服务器已停止")
     except Exception as e:
-        print(f"❌ 启动失败: {e}")
+        logger.error(f"❌ 启动失败: {e}")
         sys.exit(1)

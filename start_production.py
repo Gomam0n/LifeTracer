@@ -9,6 +9,14 @@ import os
 import sys
 from pathlib import Path
 
+# 添加backend目录到Python路径以导入logger
+backend_dir = Path(__file__).parent / "backend"
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
+from utils.logger import get_logger
+logger = get_logger(__name__)
+
 def setup_environment():
     """设置Render部署环境"""
     # 添加backend目录到Python路径
@@ -24,16 +32,16 @@ def setup_environment():
     port = os.environ.get('PORT', '8000')
     host = '0.0.0.0'  # Render要求绑定到0.0.0.0
     
-    print(f"🌐 Render部署配置:")
-    print(f"   Host: {host}")
-    print(f"   Port: {port}")
-    print(f"   Backend目录: {backend_dir}")
+    logger.info(f"🌐 Render部署配置:")
+    logger.info(f"   Host: {host}")
+    logger.info(f"   Port: {port}")
+    logger.info(f"   Backend目录: {backend_dir}")
     
     return host, int(port)
 
 def main():
     """Render启动入口"""
-    print("🚀 LifeTracer Render部署启动中...")
+    logger.info("🚀 LifeTracer Render部署启动中...")
     
     # 设置环境
     host, port = setup_environment()
@@ -47,8 +55,8 @@ def main():
         import uvicorn
         from main import app
         
-        print("✅ 成功导入应用")
-        print(f"📍 启动服务: http://{host}:{port}")
+        logger.info("✅ 成功导入应用")
+        logger.info(f"📍 启动服务: http://{host}:{port}")
         
         # 使用uvicorn启动，适合Render的配置
         uvicorn.run(
@@ -61,7 +69,7 @@ def main():
         )
         
     except Exception as e:
-        print(f"❌ 启动失败: {e}")
+        logger.error(f"❌ 启动失败: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
