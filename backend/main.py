@@ -24,6 +24,7 @@ frontend_dir = current_dir.parent / "frontend"
 if frontend_dir.exists():
     app.mount("/css", StaticFiles(directory=str(frontend_dir / "css")), name="css")
     app.mount("/js", StaticFiles(directory=str(frontend_dir / "js")), name="js")
+    app.mount("/lang", StaticFiles(directory=str(frontend_dir / "lang")), name="lang")
     app.mount("/static", StaticFiles(directory=str(frontend_dir)), name="static")
 
 # 配置CORS

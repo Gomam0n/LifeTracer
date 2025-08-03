@@ -92,7 +92,8 @@ class BiographyService:
                 "format": "json",
                 "list": "search",
                 "srsearch": name,
-                "srlimit": 5
+                "srlimit": 5,
+                "variant": language == "zh" and "zh-hans" or language
             }
             
             logger.debug(f"正在搜索维基百科: {name}")

@@ -270,12 +270,15 @@ class LifeTracerMap {
      * @param {Array} coord - 坐标
      */
     createPopupContent(index, description, coord) {
+        const stationText = i18n ? i18n.t('map.popup.location') : `第 ${index} 站`;
+        const coordinatesText = i18n ? i18n.t('map.popup.coordinates') : '坐标';
+        
         return `
             <div style="min-width: 200px;">
-                <h4 style="margin: 0 0 10px 0; color: #2c3e50;">第 ${index} 站</h4>
+                <h4 style="margin: 0 0 10px 0; color: #2c3e50;">${stationText.replace('{location}', `第 ${index} 站`)}</h4>
                 <p style="margin: 5px 0; font-size: 14px;">${description}</p>
                 <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; font-size: 12px; color: #7f8c8d;">
-                    <strong>坐标:</strong> ${coord[1].toFixed(4)}, ${coord[0].toFixed(4)}
+                    <strong>${coordinatesText}:</strong> ${coord[1].toFixed(4)}, ${coord[0].toFixed(4)}
                 </div>
             </div>
         `;
@@ -400,16 +403,21 @@ function showTrajectoryOnMap(biographyData) {
  * @param {Object} stats - 统计数据
  */
 function displayMapStats(stats) {
-    const statsContainer = document.getElementById('mapStats');
+    const statsContainer = document.getElementById('statsContent');
     if (statsContainer) {
+        const totalLocationsText = i18n ? i18n.t('map.stats.totalLocations', {count: stats.totalPoints}) : `总站点数: ${stats.totalPoints} 个`;
+        const totalDistanceText = i18n ? i18n.t('map.stats.totalDistance', {distance: stats.totalDistance}) : `总距离: 约 ${stats.totalDistance} 公里`;
+        const startPointText = i18n ? (i18n.isChinese() ? '起点' : 'Start Point') : '起点';
+        const endPointText = i18n ? (i18n.isChinese() ? '终点' : 'End Point') : '终点';
+        
         statsContainer.innerHTML = `
-            <div class="map-stats">
-                <h4>轨迹统计</h4>
-                <p><strong>总站点数:</strong> ${stats.totalPoints} 个</p>
-                <p><strong>总距离:</strong> 约 ${stats.totalDistance} 公里</p>
-                <p><strong>起点:</strong> [${stats.startPoint[1].toFixed(2)}, ${stats.startPoint[0].toFixed(2)}]</p>
-                <p><strong>终点:</strong> [${stats.endPoint[1].toFixed(2)}, ${stats.endPoint[0].toFixed(2)}]</p>
-            </div>
+            <p><strong>${totalLocationsText}</strong></p>
+            <p><strong>${totalDistanceText}</strong></p>
+            <p><strong>${startPointText}:</strong> [${stats.startPoint[1].toFixed(2)}, ${stats.startPoint[0].toFixed(2)}]</p>
+            <p><strong>${endPointText}:</strong> [${stats.endPoint[1].toFixed(2)}, ${stats.endPoint[0].toFixed(2)}]</p>
         `;
+        
+        // 显示统计信息容器
+        document.getElementById('mapStats').style.display = 'block';
     }
 }

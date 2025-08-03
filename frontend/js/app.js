@@ -5,11 +5,11 @@ const API_BASE_URL = window.location.origin;
 /**
  * 获取人物生平轨迹数据
  */
-async function getBiography() {
+async function getLifeTrajectory() {
     const personName = document.getElementById('personName').value.trim();
     
     if (!personName) {
-        showError('请输入人物姓名');
+        showError(i18n.t('error.invalidInput'));
         return;
     }
     
@@ -30,15 +30,38 @@ async function getBiography() {
         });
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            if (response.status === 404) {
+                throw new Error('NOT_FOUND');
+            } else if (response.status >= 500) {
+                throw new Error('SERVER_ERROR');
+            } else {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
         }
         
         const data = await response.json();
-        displayBiographyData(data);
+        displayLifeTrajectoryData(data);
         
     } catch (error) {
         console.error('Error:', error);
-        showError('获取数据失败，请检查网络连接或稍后重试');
+        
+        let errorMessage;
+        switch (error.message) {
+            case 'NOT_FOUND':
+                errorMessage = i18n.t('error.notFound');
+                break;
+            case 'SERVER_ERROR':
+                errorMessage = i18n.t('error.server');
+                break;
+            default:
+                if (error.name === 'TypeError') {
+                    errorMessage = i18n.t('error.network');
+                } else {
+                    errorMessage = i18n.t('error.unknown');
+                }
+        }
+        
+        showError(errorMessage);
     } finally {
         showLoading(false);
     }
@@ -48,15 +71,15 @@ async function getBiography() {
  * 显示生平轨迹数据
  * @param {Object} data - API返回的数据
  */
-function displayBiographyData(data) {
-    const biographyDataDiv = document.getElementById('biographyData');
+function displayLifeTrajectoryData(data) {
+    const coordinatesDiv = document.getElementById('coordinates');
     
     if (data.success && data.data) {
         const biography = data.data;
-        let html = `<div class="success">成功获取 ${biography.name} 的生平轨迹数据</div>`;
+        let html = `<div class="success">${i18n.t('status.success')}</div>`;
         
         if (biography.coordinates && biography.descriptions) {
-            html += '<h4>轨迹点详情：</h4>';
+            html += `<h4>${i18n.t('result.title')}：</h4>`;
             
             for (let i = 0; i < biography.coordinates.length; i++) {
                 const coord = biography.coordinates[i];
@@ -64,17 +87,20 @@ function displayBiographyData(data) {
                 
                 html += `
                     <div class="coordinate-item">
-                        <div class="coordinate">坐标 ${i + 1}: [${coord[0]}, ${coord[1]}]</div>
+                        <div class="coordinate">${i18n.t('result.coordinate')} ${i + 1}: [${coord[0]}, ${coord[1]}]</div>
                         <div class="description">${desc}</div>
                     </div>
                 `;
             }
         } else {
-            html += '<p>暂无轨迹数据</p>';
+            html += `<p>${i18n.t('result.noData')}</p>`;
         }
         
-        biographyDataDiv.innerHTML = html;
+        coordinatesDiv.innerHTML = html;
         showResult();
+        
+        // 显示地图区域
+        showMapSection();
         
         // 初始化地图（如果还未初始化）并显示轨迹
         if (biography.coordinates && biography.coordinates.length > 0) {
@@ -95,7 +121,7 @@ function displayBiographyData(data) {
             }, 100);
         }
     } else {
-        showError(data.message || '获取数据失败');
+        showError(data.message || i18n.t('error.unknown'));
     }
 }
 
@@ -114,7 +140,7 @@ function showLoading(show) {
  */
 function showError(message) {
     const errorDiv = document.getElementById('error');
-    errorDiv.textContent = message;
+    errorDiv.querySelector('span').textContent = message;
     errorDiv.style.display = 'block';
 }
 
@@ -140,13 +166,50 @@ function hideResult() {
 }
 
 /**
+ * 显示地图区域
+ */
+function showMapSection() {
+    document.getElementById('mapSection').style.display = 'block';
+}
+
+/**
+ * 隐藏地图区域
+ */
+function hideMapSection() {
+    document.getElementById('mapSection').style.display = 'none';
+}
+
+/**
+ * 语言切换回调函数
+ * @param {Object} detail - 语言切换事件详情
+ */
+window.onLanguageChanged = function(detail) {
+    console.log('应用收到语言切换事件:', detail.language);
+    
+    // 更新输入框占位符
+    const personNameInput = document.getElementById('personName');
+    personNameInput.placeholder = i18n.t('input.placeholder');
+    
+    // 如果有错误信息显示，更新错误信息
+    const errorDiv = document.getElementById('error');
+    if (errorDiv.style.display !== 'none') {
+        // 保持当前错误状态，但不更新文本，因为具体错误信息需要重新获取
+    }
+    
+    // 如果地图已初始化，更新地图相关文本
+    if (mapInitialized && window.lifeTracerMap) {
+        // 地图文本更新将由map.js处理
+    }
+};
+
+/**
  * 初始化事件监听器
  */
 function initEventListeners() {
     // 支持回车键提交
     document.getElementById('personName').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
-            getBiography();
+            getLifeTrajectory();
         }
     });
 }

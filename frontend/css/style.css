@@ -12,12 +12,50 @@ body {
     padding: 30px;
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative;
 }
 
 h1 {
     text-align: center;
     color: #333;
     margin-bottom: 30px;
+}
+
+/* 语言切换器样式 */
+.language-switcher {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 5px;
+}
+
+.lang-btn {
+    background-color: #f8f9fa;
+    color: #495057;
+    border: 1px solid #dee2e6;
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 0;
+}
+
+.lang-btn:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.lang-btn.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.lang-btn.active:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
 }
 
 .input-section {
