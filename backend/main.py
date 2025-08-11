@@ -4,16 +4,29 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
+from contextlib import asynccontextmanager
 import uvicorn
 from pathlib import Path
 from services.biography_service import BiographyService
 from models.response_models import (
     BiographyResponse,
 )
+from utils.cache_factory import get_cache_manager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 启动时的代码可以放在这里
+    yield
+    # 关闭时的代码
+    cache_manager = get_cache_manager()
+    if hasattr(cache_manager, 'close'):
+        await cache_manager.close()
+
 app = FastAPI(
     title="LifeTracer API",
     description="历史名人生平足迹可视化API",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # 获取前端文件路径
@@ -68,7 +81,6 @@ async def get_biography(request: PersonRequest):
     获取历史人物的生平信息
     """
     try:
-        #return get_test_biography("苏轼")
         biography_data = await biography_service.get_biography(
             name=request.name,
             language=request.language,

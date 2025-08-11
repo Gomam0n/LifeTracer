@@ -78,6 +78,11 @@ def main():
     logger.info("📝 一体化部署：前后端通过同一服务器提供")
     logger.info("="*60)
     
+    # 设置Redis缓存环境变量（开发环境默认启用）
+    os.environ.setdefault('CACHE_TYPE', 'redis')
+    os.environ.setdefault('REDIS_URL', 'redis://localhost:6379')
+    logger.info("🔧 开发环境默认启用Redis缓存: redis://localhost:6379")
+    
     # 检查文件结构
     if not check_file_structure():
         sys.exit(1)

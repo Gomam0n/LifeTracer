@@ -10,7 +10,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
 
 from models.response_models import BiographyData
-from utils.cache_manager import CacheManager
+from utils.cache_factory import get_cache_manager
 from utils.llm_client import LLMClient
 from utils.logger import get_logger
 from utils.prompts import CITY_COORDINATES_PROMPT, LIFE_TRAJECTORY_PROMPT
@@ -19,7 +19,9 @@ logger = get_logger(__name__)
 
 class BiographyService:
     def __init__(self):
-        self.cache = CacheManager()
+        # 使用缓存工厂，支持动态选择文件缓存或Redis缓存
+        # 通过环境变量 CACHE_TYPE 或 REDIS_URL 控制
+        self.cache = get_cache_manager()
         self.llm_client = LLMClient(os.environ.get("OPENAI_API_KEY"))
         self.session = None
         
