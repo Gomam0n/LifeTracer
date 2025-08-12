@@ -24,6 +24,8 @@ class BiographyService:
         self.cache = get_cache_manager()
         self.llm_client = LLMClient(os.environ.get("OPENAI_API_KEY"))
         self.session = None
+        # 请求去重锁字典，防止并发请求同一人物时重复调用API
+        self._request_locks = {}
         
     async def get_session(self):
         if self.session is None:
@@ -33,49 +35,67 @@ class BiographyService:
     async def close(self):
         if self.session:
             await self.session.close()
+        # 清理所有锁
+        self._request_locks.clear()
     
+    # 为了简化代码和避免竞态条件，我们不主动清理锁对象
     async def get_biography(self, name: str, language: str = "zh-hans", detail_level: str = "medium") -> BiographyData:
         """
         获取历史人物的生平信息
+        使用请求去重机制防止并发请求造成重复API调用
         """
-        # 检查缓存
         cache_key = f"biography_{name}_{language}_{detail_level}"
+        
+        # 第一次检查缓存
         cached_data = await self.cache.get(cache_key)
         if cached_data:
             logger.info(f"从缓存获取 {name} 的生平信息")
             return BiographyData(**cached_data)
         
-        try:
-            # 1. 从维基百科获取基础信息
-            wiki_data = await self._get_wikipedia_data(name, language)
-            # 2. 使用LLM解析生平
-            life_trajectory = await self.extract_life_trajectory(wiki_data)
+        # 获取或创建该缓存键的锁（原子操作，避免竞态条件）
+        lock = self._request_locks.setdefault(cache_key, asyncio.Lock())
+        
+        # 使用锁确保同一时间只有一个请求在处理
+        async with lock:
+            # 再次检查缓存（可能在等待锁的过程中其他请求已经完成并缓存了结果）
+            cached_data = await self.cache.get(cache_key)
+            if cached_data:
+                logger.info(f"等待期间从缓存获取 {name} 的生平信息")
+                return BiographyData(**cached_data)
+            
+            # 执行实际的数据获取逻辑
+            logger.info(f"开始处理 {name} 的生平信息请求")
+            try:
+                # 1. 从维基百科获取基础信息
+                wiki_data = await self._get_wikipedia_data(name, language)
+                # 2. 使用LLM解析生平
+                life_trajectory = await self.extract_life_trajectory(wiki_data)
 
-            name = life_trajectory["person_name"]
-            places = []
-            descriptions = []
-            for trajectory in life_trajectory["trajectory"]:
-                places.append(trajectory["location"])
-                descriptions.append(trajectory["time"] + "," + trajectory["description"])
-            
-            location_data = await self.get_city_coordinates(places)
-            coordinates = []
-            for coordinate in location_data["locations"]:
-                coordinates.append([coordinate["longitude"], coordinate["latitude"]])
-            biography = BiographyData(
-                name=name,
-                coordinates=coordinates,
-                descriptions=descriptions
-            )
-            # 4. 缓存结果
-            await self.cache.set(cache_key, biography.dict(), expire=3600*24)  # 缓存24小时
-            
-            logger.info(f"成功获取 {name} 的生平信息")
-            return biography
-            
-        except Exception as e:
-            logger.error(f"获取 {name} 生平信息失败: {str(e)}")
-            raise Exception(f"无法获取 {name} 的生平信息: {str(e)}")
+                name = life_trajectory["person_name"]
+                places = []
+                descriptions = []
+                for trajectory in life_trajectory["trajectory"]:
+                    places.append(trajectory["location"])
+                    descriptions.append(trajectory["time"] + "," + trajectory["description"])
+                
+                location_data = await self.get_city_coordinates(places)
+                coordinates = []
+                for coordinate in location_data["locations"]:
+                    coordinates.append([coordinate["longitude"], coordinate["latitude"]])
+                biography = BiographyData(
+                    name=name,
+                    coordinates=coordinates,
+                    descriptions=descriptions
+                )
+                # 4. 缓存结果
+                await self.cache.set(cache_key, biography.dict(), expire=3600*24)  # 缓存24小时
+                
+                logger.info(f"成功获取并缓存 {name} 的生平信息")
+                return biography
+                
+            except Exception as e:
+                logger.error(f"获取 {name} 生平信息失败: {str(e)}")
+                raise Exception(f"无法获取 {name} 的生平信息: {str(e)}")
     
     async def _get_wikipedia_data(self, name: str, language: str) -> Dict[str, Any]:
         """

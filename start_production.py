@@ -30,7 +30,16 @@ def check_redis_running():
         return False
 
 def start_redis_server():
-    """启动Redis服务器（生产环境）"""
+    """启动Redis服务器（生产环境）
+    
+    注意：在Render等云平台上，此函数可能无法成功启动Redis服务，因为：
+    1. 云平台通常不支持运行系统级服务（systemctl、net start等）
+    2. 容器环境中没有预装Redis服务器
+    3. requirements.txt中的redis包只是Python客户端，不包含Redis服务器
+    
+    解决方案：
+    - 配置使用外部Redis服务（Redis Cloud、Upstash等）
+    """
     if check_redis_running():
         logger.info("✅ Redis服务已在运行")
         return True
@@ -71,6 +80,7 @@ def start_redis_server():
                         return True
                 except FileNotFoundError:
                     logger.warning("⚠️ 未找到Redis，请确保已安装Redis")
+                    return False
         
         logger.warning("⚠️ Redis启动失败，将使用文件缓存")
         return False
@@ -90,7 +100,7 @@ def setup_environment():
     
     os.environ.setdefault('PYTHONPATH', str(backend_dir))
     
-    # 启动Redis服务
+    # 启动Redis服务（注意：在Render等云平台可能失败，会自动降级到文件缓存）
     redis_started = start_redis_server()
     
     # 设置Redis缓存环境变量
