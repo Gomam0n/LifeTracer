@@ -10,10 +10,10 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
 
 from models.response_models import BiographyData
-from utils.cache_factory import get_cache_manager
-from utils.llm_client import LLMClient
+from caching.cache_factory import get_cache_manager
+from llm.llm_client import LLMClient
 from utils.logger import get_logger
-from utils.prompts import CITY_COORDINATES_PROMPT, LIFE_TRAJECTORY_PROMPT
+from llm.prompts import CITY_COORDINATES_PROMPT, LIFE_TRAJECTORY_PROMPT
 
 logger = get_logger(__name__)
 

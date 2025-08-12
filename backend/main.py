@@ -11,7 +11,7 @@ from services.biography_service import BiographyService
 from models.response_models import (
     BiographyResponse,
 )
-from utils.cache_factory import get_cache_manager
+from caching.cache_factory import get_cache_manager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

@@ -46,7 +46,7 @@ def create_cache_manager() -> Union['CacheManager', 'RedisCacheManager']:
 def _create_redis_cache(redis_url: str = None):
     """创建 Redis 缓存管理器"""
     try:
-        from utils.redis_cache_manager import RedisCacheManager
+        from caching.redis_cache_manager import RedisCacheManager
         
         if not redis_url:
             redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379')
@@ -64,7 +64,7 @@ def _create_redis_cache(redis_url: str = None):
 
 def _create_file_cache():
     """创建文件缓存管理器"""
-    from utils.cache_manager import CacheManager
+    from caching.cache_manager import CacheManager
     
     cache_dir = os.environ.get('CACHE_DIR', 'cache')
     cache_manager = CacheManager(cache_dir=cache_dir)
