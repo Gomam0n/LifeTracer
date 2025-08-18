@@ -12,6 +12,8 @@ from models.response_models import (
     BiographyResponse,
 )
 from caching.cache_factory import get_cache_manager
+from middleware.rate_limiter import RateLimiterMiddleware
+from middleware.validators import validate_person_name_middleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -49,6 +51,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 添加速率限制中间件
+app.add_middleware(
+    RateLimiterMiddleware,
+    requests_per_minute=30  # 每分钟30个请求
+)
+
+# 添加验证中间件
+app.middleware("http")(validate_person_name_middleware)
+
 # 初始化服务
 biography_service = BiographyService()
 
@@ -81,6 +92,7 @@ async def get_biography(request: PersonRequest):
     获取历史人物的生平信息
     """
     try:
+        # 调用服务
         biography_data = await biography_service.get_biography(
             name=request.name,
             language=request.language,

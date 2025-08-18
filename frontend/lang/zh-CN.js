@@ -26,6 +26,7 @@ window.LANG_DATA = {
         network: "网络连接失败，请检查网络设置",
         server: "服务器错误，请稍后重试",
         notFound: "未找到该人物的生平信息",
+        validation: "输入验证失败，请检查姓名格式",
         invalidInput: "请输入有效的人物姓名",
         timeout: "请求超时，请重试",
         unknown: "未知错误，请联系管理员"

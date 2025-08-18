@@ -8,3 +8,4 @@ test*
 **/tests/
 **/.*
 CODE_ANALYSIS.md
+CLAUDE.md

@@ -26,6 +26,7 @@ window.LANG_DATA = {
         network: "Network connection failed, please check your network settings",
         server: "Server error, please try again later",
         notFound: "No biographical information found for this person",
+        validation: "Input validation failed, please check the name format",
         invalidInput: "Please enter a valid person's name",
         timeout: "Request timeout, please try again",
         unknown: "Unknown error, please contact administrator"

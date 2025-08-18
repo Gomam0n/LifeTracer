@@ -32,6 +32,8 @@ async function getLifeTrajectory() {
         if (!response.ok) {
             if (response.status === 404) {
                 throw new Error('NOT_FOUND');
+            } else if (response.status === 400) {
+                throw new Error('VALIDATION_ERROR');
             } else if (response.status >= 500) {
                 throw new Error('SERVER_ERROR');
             } else {
@@ -49,6 +51,9 @@ async function getLifeTrajectory() {
         switch (error.message) {
             case 'NOT_FOUND':
                 errorMessage = i18n.t('error.notFound');
+                break;
+            case 'VALIDATION_ERROR':
+                errorMessage = i18n.t('error.validation');
                 break;
             case 'SERVER_ERROR':
                 errorMessage = i18n.t('error.server');
