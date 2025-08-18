@@ -7,3 +7,4 @@ test*
 **/deploy/
 **/tests/
 **/.*
+CODE_ANALYSIS.md

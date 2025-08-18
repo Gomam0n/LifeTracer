@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 import asyncio
-import aiohttp
 from typing import Dict, List, Any
 import json
-from bs4 import BeautifulSoup
 import sys
 import os
 # 添加backend目录到Python路径
@@ -12,33 +10,29 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
 from models.response_models import BiographyData
 from caching.cache_factory import get_cache_manager
 from llm.llm_client import LLMClient
-from utils.logger import get_logger
 from llm.prompts import CITY_COORDINATES_PROMPT, LIFE_TRAJECTORY_PROMPT
+from .base_service import BaseService
+from utils.error_handler import handle_service_error, WikipediaError, LLMError, log_and_raise_error
+from utils.html_parser import HTMLParser
 
-logger = get_logger(__name__)
-
-class BiographyService:
+class BiographyService(BaseService):
     def __init__(self):
+        super().__init__()
         # 使用缓存工厂，支持动态选择文件缓存或Redis缓存
         # 通过环境变量 CACHE_TYPE 或 REDIS_URL 控制
         self.cache = get_cache_manager()
         self.llm_client = LLMClient(os.environ.get("OPENAI_API_KEY"))
-        self.session = None
         # 请求去重锁字典，防止并发请求同一人物时重复调用API
         self._request_locks = {}
-        
-    async def get_session(self):
-        if self.session is None:
-            self.session = aiohttp.ClientSession()
-        return self.session
     
     async def close(self):
-        if self.session:
-            await self.session.close()
+        """Override parent close to also clear locks"""
+        await super().close()
         # 清理所有锁
         self._request_locks.clear()
     
     # 为了简化代码和避免竞态条件，我们不主动清理锁对象
+    @handle_service_error
     async def get_biography(self, name: str, language: str = "zh-hans", detail_level: str = "medium") -> BiographyData:
         """
         获取历史人物的生平信息
@@ -49,7 +43,7 @@ class BiographyService:
         # 第一次检查缓存
         cached_data = await self.cache.get(cache_key)
         if cached_data:
-            logger.info(f"从缓存获取 {name} 的生平信息")
+            self.logger.info(f"从缓存获取 {name} 的生平信息")
             return BiographyData(**cached_data)
         
         # 获取或创建该缓存键的锁（原子操作，避免竞态条件）
@@ -60,11 +54,11 @@ class BiographyService:
             # 再次检查缓存（可能在等待锁的过程中其他请求已经完成并缓存了结果）
             cached_data = await self.cache.get(cache_key)
             if cached_data:
-                logger.info(f"等待期间从缓存获取 {name} 的生平信息")
+                self.logger.info(f"等待期间从缓存获取 {name} 的生平信息")
                 return BiographyData(**cached_data)
             
             # 执行实际的数据获取逻辑
-            logger.info(f"开始处理 {name} 的生平信息请求")
+            self.logger.info(f"开始处理 {name} 的生平信息请求")
             try:
                 # 1. 从维基百科获取基础信息
                 wiki_data = await self._get_wikipedia_data(name, language)
@@ -90,12 +84,17 @@ class BiographyService:
                 # 4. 缓存结果
                 await self.cache.set(cache_key, biography.dict(), expire=3600*24)  # 缓存24小时
                 
-                logger.info(f"成功获取并缓存 {name} 的生平信息")
+                self.logger.info(f"成功获取并缓存 {name} 的生平信息")
                 return biography
                 
             except Exception as e:
-                logger.error(f"获取 {name} 生平信息失败: {str(e)}")
-                raise Exception(f"无法获取 {name} 的生平信息: {str(e)}")
+                log_and_raise_error(
+                    error_type=LLMError,
+                    message=f"无法获取 {name} 的生平信息",
+                    error_code="BIOGRAPHY_EXTRACTION_FAILED",
+                    original_exception=e,
+                    details={"name": name, "language": language, "detail_level": detail_level}
+                )
     
     async def _get_wikipedia_data(self, name: str, language: str) -> Dict[str, Any]:
         """
@@ -118,21 +117,26 @@ class BiographyService:
                 "variant": language == "zh" and "zh-hans" or language
             }
             
-            logger.debug(f"正在搜索维基百科: {name}")
-            logger.debug(f"搜索URL: {search_url}")
-            logger.debug(f"搜索参数: {search_params}")
+            self.logger.debug(f"正在搜索维基百科: {name}")
+            self.logger.debug(f"搜索URL: {search_url}")
+            self.logger.debug(f"搜索参数: {search_params}")
             
             async with session.get(search_url, params=search_params) as response:
                 search_data = await response.json()
             
-            logger.debug(f"搜索结果: {json.dumps(search_data, ensure_ascii=False, indent=2)}")
+            self.logger.debug(f"搜索结果: {json.dumps(search_data, ensure_ascii=False, indent=2)}")
             
             if not search_data.get("query", {}).get("search"):
-                raise Exception(f"在维基百科中未找到 {name} 的相关信息")
+                log_and_raise_error(
+                    error_type=WikipediaError,
+                    message=f"在维基百科中未找到 {name} 的相关信息",
+                    error_code="NO_SEARCH_RESULTS",
+                    details={"name": name, "language": language}
+                )
             
             # 获取最相关的页面标题
             page_title = search_data["query"]["search"][0]["title"]
-            logger.debug(f"找到页面: {page_title}")
+            self.logger.debug(f"找到页面: {page_title}")
             
             # 2. 获取页面内容
             content_params = {
@@ -142,7 +146,7 @@ class BiographyService:
                 "prop": "sections|text",
             }
             
-            logger.debug(f"获取页面内容参数: {content_params}")
+            self.logger.debug(f"获取页面内容参数: {content_params}")
             
             async with session.get(search_url, params=content_params) as response:
                 content_data = await response.json()     
@@ -153,85 +157,26 @@ class BiographyService:
             elif isinstance(html_text, str):
                 html_content = html_text
             else:
-                logger.debug(f"意外的text类型: {type(html_text)}")
+                self.logger.debug(f"意外的text类型: {type(html_text)}")
                 html_content = str(html_text)
-            biography_section = self.extract_h2_section_content(html_content, "生平")
+            
+            # Try to extract biography section, fallback to full content
+            biography_section = HTMLParser.extract_section_by_id(html_content, "生平")
             if not biography_section:
-                return html_content
-            return biography_section
+                # If no specific biography section, extract all readable text
+                biography_section = HTMLParser.extract_all_text(html_content)
+            
+            return biography_section if biography_section else html_content
             
         except Exception as e:
-            logger.error(f"从维基百科获取 {name} 信息失败: {str(e)}")
-            raise
+            log_and_raise_error(
+                error_type=WikipediaError,
+                message=f"从维基百科获取 {name} 信息失败",
+                error_code="WIKIPEDIA_API_ERROR", 
+                original_exception=e,
+                details={"name": name, "language": language, "wiki_domain": wiki_domain}
+            )
 
-    def extract_h2_section_content(self, html_content: str, target_h2_id: str) -> str:
-        """
-        从HTML内容中提取指定h2标签到下一个h2标签之间的内容
-        
-        Args:
-            html_content: HTML内容字符串
-            target_h2_id: 目标h2标签的id属性值（如"生平"）
-        
-        Returns:
-            提取的内容文本，如果未找到则返回空字符串
-        """
-        try:
-            soup = BeautifulSoup(html_content, 'html.parser')
-            
-            # 查找目标h2标签，可能被包装在div中
-            target_h2 = soup.find('h2', {'id': target_h2_id})
-            if not target_h2:
-                logger.debug(f"未找到id为'{target_h2_id}'的h2标签")
-                return ""
-            
-            logger.debug(f"找到目标h2标签: {target_h2.get_text()}")
-            
-            # 找到h2标签的父容器（可能是div）
-            h2_container = target_h2.parent
-            logger.debug(f"h2容器标签: {h2_container.name if h2_container else 'None'}")
-            
-            # 收集从h2容器之后到下一个h2容器之间的所有内容
-            content_elements = []
-            current_element = h2_container.next_sibling if h2_container else target_h2.next_sibling
-            
-            while current_element:
-                # 检查是否遇到下一个h2标签（可能在div中或直接的h2）
-                if current_element.name == 'h2':
-                    logger.debug(f"遇到下一个h2标签: {current_element.get_text()}")
-                    break
-                elif current_element.name == 'div' and current_element.find('h2'):
-                    # 检查div中是否包含h2标签
-                    next_h2 = current_element.find('h2')
-                    logger.debug(f"遇到包含h2的div: {next_h2.get_text()}")
-                    break
-                
-                # 收集有效的内容元素
-                if current_element.name and current_element.name not in ['script', 'style', 'meta']:
-                    content_elements.append(current_element)
-                
-                current_element = current_element.next_sibling
-                logger.debug(current_element)
-            
-            # 提取文本内容
-            extracted_text = ""
-            for element in content_elements:
-                if element.name in ['p', 'div', 'ul', 'ol', 'li', 'table', 'blockquote']:
-                    # 跳过包含h2的div（这些是章节标题）
-                    if element.name == 'div' and element.find('h2'):
-                        continue
-                    
-                    text = element.get_text(strip=True)
-                    if text:
-                        extracted_text += text + "\n\n"
-            
-            logger.debug(f"提取的内容长度: {len(extracted_text)}")
-            logger.debug(f"内容预览: {extracted_text[:200]}...")
-            
-            return extracted_text.strip()
-            
-        except Exception as e:
-            logger.debug(f"提取h2章节内容失败: {str(e)}")
-            return ""
     
     async def search_suggestions(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
@@ -266,7 +211,7 @@ class BiographyService:
             return suggestions
             
         except Exception as e:
-            logger.error(f"搜索建议失败: {str(e)}")
+            self.logger.error(f"搜索建议失败: {str(e)}")
             return []
     
     async def extract_life_trajectory(self, biography_text: str) -> str:
@@ -304,70 +249,3 @@ class BiographyService:
         )
         coord_data = json.loads(response)
         return coord_data
-
-# 测试函数
-async def test_wikipedia_api():
-    """测试维基百科API请求"""
-    service = BiographyService()
-    
-    try:
-        logger.info("=== 测试维基百科API ===")
-        # 测试搜索功能
-        suggestions = await service.search_suggestions("苏轼")
-        logger.info(f"搜索建议: {suggestions}")
-        
-        # 测试获取维基百科数据
-        wiki_data = await service._get_wikipedia_data("苏轼", "zh")
-        logger.info(f"维基百科数据获取成功")
-        
-    except Exception as e:
-        logger.error(f"维基百科API测试失败: {e}")
-    finally:
-        await service.close()
-
-
-async def test_llm_enhancement():
-    """测试LLM增强功能"""
-    service = BiographyService()
-    
-    try:
-        logger.info("\n=== 测试LLM增强 ===")
-        # 模拟维基百科数据
-        mock_wiki_data = {
-            "title": "李白",
-            "extract": "李白（701年－762年），字太白，号青莲居士，唐朝浪漫主义诗人，被后人誉为`诗仙`。",
-            "full_content": "李白（701年－762年），字太白，号青莲居士，唐朝浪漫主义诗人，被后人誉为`诗仙`。祖籍陇西成纪，出生于中亚西域的碎叶城，后来随父亲迁至剑南道绵州。李白存世诗文千余篇，有《李太白集》传世。代表作有《望庐山瀑布》、《行路难》、《蜀道难》、《将进酒》、《梁甫吟》、《早发白帝城》等多首。",
-            "url": "https://zh.wikipedia.org/wiki/李白"
-        }
-        
-        enhanced_data = await service._enhance_with_llm(mock_wiki_data, "medium")
-        logger.info(f"LLM增强成功: {json.dumps(enhanced_data, ensure_ascii=False, indent=2)}")
-        
-    except Exception as e:
-        logger.error(f"LLM增强测试失败: {e}")
-    finally:
-        await service.close()
-
-
-async def test_full_biography():
-    """测试完整的传记获取流程"""
-    service = BiographyService()
-    
-    try:
-        logger.info("\n=== 测试完整传记获取 ===")
-        biography = await service.get_biography("李白", "zh", "medium")
-        logger.info(biography)
-    except Exception as e:
-        logger.error(f"完整传记测试失败: {e}")
-    finally:
-        await service.close()
-
-
-
-if __name__ == "__main__":
-    logger.info("BiographyService 测试程序")
-    
-    choice = "1"
-    
-    if choice == "1":
-        asyncio.run(test_full_biography())
