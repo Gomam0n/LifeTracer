@@ -24,6 +24,7 @@ langchain-core>=0.1.0
 langchain-community>=0.0.10
 langgraph>=0.0.20
 langsmith>=0.0.69
+langchain-openai>=0.1.0
 
 # 开发工具（可选）
 livereload==2.6.3
