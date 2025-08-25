@@ -96,7 +96,8 @@ async def get_biography(request: PersonRequest):
         biography_data = await biography_service.get_biography(
             name=request.name,
             language=request.language,
-            detail_level=request.detail_level
+            detail_level=request.detail_level,
+            parse_mode=3  # 使用模式3：基于自然段分隔的并发调用
         )
         return BiographyResponse(
             success=True,

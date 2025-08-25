@@ -18,6 +18,13 @@ beautifulsoup4==4.12.2
 # Redis 缓存支持 (可选，提供更好的并发性能)
 redis[hiredis]>=4.5.0
 
+# LangChain 和 LangGraph 依赖（使用最新版本）
+langchain>=0.1.0
+langchain-core>=0.1.0
+langchain-community>=0.0.10
+langgraph>=0.0.20
+langsmith>=0.0.69
+
 # 开发工具（可选）
 livereload==2.6.3
 

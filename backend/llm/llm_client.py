@@ -2,7 +2,8 @@
 简单的GPT模型交互客户端
 """
 import aiohttp
-from typing import Optional
+import asyncio
+from typing import Optional, List, Dict, Any
 
 
 class LLMClient:
@@ -57,4 +58,69 @@ class LLMClient:
                 return result["choices"][0]["message"]["content"]
         except Exception as e:
             raise Exception(f"GPT请求失败: {str(e)}")
+    
+    async def chat_batch(self, requests: List[Dict[str, Any]]) -> List[str]:
+        """
+        批量并发处理多个LLM请求
+        
+        Args:
+            requests: 请求列表，每个请求包含 {"message": str, "system_prompt": str, "max_tokens": int, "temperature": float}
+            
+        Returns:
+            响应列表，与请求顺序对应
+        """
+        import time
+        from utils.logger import get_logger
+        
+        logger = get_logger("LLMClient")
+        
+        async def timed_chat(req_index: int, req: Dict[str, Any]):
+            """带时间记录的chat请求"""
+            start_time = time.time()
+            try:
+                result = await self.chat(
+                    message=req["message"],
+                    system_prompt=req.get("system_prompt"),
+                    max_tokens=req.get("max_tokens", 10000),
+                    temperature=req.get("temperature", 0.0)
+                )
+                end_time = time.time()
+                duration = end_time - start_time
+                logger.info(f"Chat请求#{req_index+1} 耗时: {duration:.2f}秒")
+                # logger.info(f"Chat请求#{req_index+1} 输入: {req['message']}")
+                # logger.info(f"Chat请求#{req_index+1} 输出: {result}")
+
+                return result
+            except Exception as e:
+                end_time = time.time()
+                duration = end_time - start_time
+                logger.error(f"Chat请求#{req_index+1} 失败，耗时: {duration:.2f}秒，错误: {str(e)}")
+                raise e
+        
+        tasks = []
+        for i, req in enumerate(requests):
+            task = timed_chat(i, req)
+            tasks.append(task)
+        
+        # 并发执行所有请求
+        batch_start_time = time.time()
+        try:
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            batch_end_time = time.time()
+            batch_duration = batch_end_time - batch_start_time
+            logger.info(f"批量请求总耗时: {batch_duration:.2f}秒，请求数: {len(requests)}")
+
+            # 处理异常结果
+            processed_results = []
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    raise Exception(f"批量请求第{i+1}个失败: {str(result)}")
+                processed_results.append(result)
+            
+            return processed_results
+        except Exception as e:
+            batch_end_time = time.time()
+            batch_duration = batch_end_time - batch_start_time
+            logger.error(f"批量LLM请求失败，总耗时: {batch_duration:.2f}秒，错误: {str(e)}")
+            raise Exception(f"批量LLM请求失败: {str(e)}")
 
