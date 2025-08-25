@@ -13,10 +13,13 @@ async function getLifeTrajectory() {
         return;
     }
     
-    // 显示加载状态
-    showLoading(true);
+    // 隐藏上一次的搜索结果和地图
     hideError();
     hideResult();
+    hideMapSection();
+    
+    // 显示动态加载效果
+    showDynamicLoading(true);
     
     try {
         const response = await fetch(`${API_BASE_URL}/api/biography`, {
@@ -68,7 +71,7 @@ async function getLifeTrajectory() {
         
         showError(errorMessage);
     } finally {
-        showLoading(false);
+        showDynamicLoading(false);
     }
 }
 
@@ -77,34 +80,10 @@ async function getLifeTrajectory() {
  * @param {Object} data - API返回的数据
  */
 function displayLifeTrajectoryData(data) {
-    const coordinatesDiv = document.getElementById('coordinates');
-    
     if (data.success && data.data) {
         const biography = data.data;
-        let html = `<div class="success">${i18n.t('status.success')}</div>`;
         
-        if (biography.coordinates && biography.descriptions) {
-            html += `<h4>${i18n.t('result.title')}：</h4>`;
-            
-            for (let i = 0; i < biography.coordinates.length; i++) {
-                const coord = biography.coordinates[i];
-                const desc = biography.descriptions[i];
-                
-                html += `
-                    <div class="coordinate-item">
-                        <div class="coordinate">${i18n.t('result.coordinate')} ${i + 1}: [${coord[0]}, ${coord[1]}]</div>
-                        <div class="description">${desc}</div>
-                    </div>
-                `;
-            }
-        } else {
-            html += `<p>${i18n.t('result.noData')}</p>`;
-        }
-        
-        coordinatesDiv.innerHTML = html;
-        showResult();
-        
-        // 显示地图区域
+        // 直接显示地图区域，不显示结果文本
         showMapSection();
         
         // 初始化地图（如果还未初始化）并显示轨迹
@@ -130,13 +109,16 @@ function displayLifeTrajectoryData(data) {
     }
 }
 
+
 /**
- * 显示/隐藏加载状态
- * @param {boolean} show - 是否显示加载状态
+ * 显示/隐藏动态加载效果
+ * @param {boolean} show - 是否显示动态加载效果
  */
-function showLoading(show) {
-    document.getElementById('loading').style.display = show ? 'block' : 'none';
-    document.querySelector('button').disabled = show;
+function showDynamicLoading(show) {
+    const loadingContainer = document.getElementById('loading-container');
+    if (loadingContainer) {
+        loadingContainer.style.display = show ? 'block' : 'none';
+    }
 }
 
 /**

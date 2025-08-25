@@ -16,7 +16,8 @@ window.LANG_DATA = {
 
     // Status messages
     status: {
-        loading: "Querying life trajectory, please wait...",
+        searching: "Searching for person information",
+        please_wait: "Please wait, this may take some time...",
         success: "Query successful!",
         error: "Query failed, please try again"
     },

@@ -16,7 +16,8 @@ window.LANG_DATA = {
 
     // 状态提示
     status: {
-        loading: "正在查询人物生平轨迹，请稍候...",
+        searching: "正在搜索人物信息",
+        please_wait: "请稍候，这可能需要一些时间...",
         success: "查询成功！",
         error: "查询失败，请重试"
     },
