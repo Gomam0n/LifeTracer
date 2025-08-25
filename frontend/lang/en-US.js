@@ -48,8 +48,17 @@ window.LANG_DATA = {
     map: {
         title: "Life Trajectory Map",
         loading: "Loading map...",
+        toggle_stats: "Show Coordinates",
+        hide_stats: "Hide Coordinates",
         error: "Failed to load map",
         noData: "No trajectory data available",
+        coordinate_details: "Coordinate Details",
+        trajectory_statistics: "Trajectory Statistics",
+        total_points: "Total Points",
+        total_distance: "Total Distance",
+        start_point: "Start",
+        end_point: "End",
+        via_point: "Via",
         stats: {
             title: "Trajectory Statistics",
             totalLocations: "Total locations: {count}",

@@ -301,56 +301,6 @@ class LifeTracerMap {
         });
     }
 
-    /**
-     * 获取地图统计信息
-     */
-    getMapStats() {
-        if (!this.currentData) return null;
-
-        const coordinates = this.currentData.coordinates;
-        let totalDistance = 0;
-
-        // 计算总距离（简单的直线距离）
-        for (let i = 1; i < coordinates.length; i++) {
-            const prev = coordinates[i - 1];
-            const curr = coordinates[i];
-            const distance = this.calculateDistance(prev[1], prev[0], curr[1], curr[0]);
-            totalDistance += distance;
-        }
-
-        return {
-            totalPoints: coordinates.length,
-            totalDistance: Math.round(totalDistance),
-            startPoint: coordinates[0],
-            endPoint: coordinates[coordinates.length - 1]
-        };
-    }
-
-    /**
-     * 计算两点间距离（公里）
-     * @param {number} lat1 - 纬度1
-     * @param {number} lon1 - 经度1
-     * @param {number} lat2 - 纬度2
-     * @param {number} lon2 - 经度2
-     */
-    calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371; // 地球半径（公里）
-        const dLat = this.deg2rad(lat2 - lat1);
-        const dLon = this.deg2rad(lon2 - lon1);
-        const a = 
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    }
-
-    /**
-     * 角度转弧度
-     */
-    deg2rad(deg) {
-        return deg * (Math.PI / 180);
-    }
 
     /**
      * 销毁地图实例
@@ -390,34 +340,4 @@ function showTrajectoryOnMap(biographyData) {
     
     lifeTracerMap.displayTrajectory(biographyData);
     
-    // 显示统计信息
-    const stats = lifeTracerMap.getMapStats();
-    if (stats) {
-        console.log('轨迹统计:', stats);
-        displayMapStats(stats);
-    }
-}
-
-/**
- * 显示地图统计信息
- * @param {Object} stats - 统计数据
- */
-function displayMapStats(stats) {
-    const statsContainer = document.getElementById('statsContent');
-    if (statsContainer) {
-        const totalLocationsText = i18n ? i18n.t('map.stats.totalLocations', {count: stats.totalPoints}) : `总站点数: ${stats.totalPoints} 个`;
-        const totalDistanceText = i18n ? i18n.t('map.stats.totalDistance', {distance: stats.totalDistance}) : `总距离: 约 ${stats.totalDistance} 公里`;
-        const startPointText = i18n ? (i18n.isChinese() ? '起点' : 'Start Point') : '起点';
-        const endPointText = i18n ? (i18n.isChinese() ? '终点' : 'End Point') : '终点';
-        
-        statsContainer.innerHTML = `
-            <p><strong>${totalLocationsText}</strong></p>
-            <p><strong>${totalDistanceText}</strong></p>
-            <p><strong>${startPointText}:</strong> [${stats.startPoint[1].toFixed(2)}, ${stats.startPoint[0].toFixed(2)}]</p>
-            <p><strong>${endPointText}:</strong> [${stats.endPoint[1].toFixed(2)}, ${stats.endPoint[0].toFixed(2)}]</p>
-        `;
-        
-        // 显示统计信息容器
-        document.getElementById('mapStats').style.display = 'block';
-    }
 }

@@ -38,10 +38,14 @@
 
         <!-- 地图容器 -->
         <div class="map-section" id="mapSection" style="display: none;">
-            <h3 data-i18n="map.title">生平轨迹地图</h3>
+            <div class="map-header">
+                <h3 data-i18n="map.title">生平轨迹地图</h3>
+            </div>
             <div id="map"></div>
+            <div class="map-controls">
+                <button class="stats-toggle-btn" id="statsToggleBtn" onclick="toggleStats()" data-i18n="map.toggle_stats">显示轨迹统计</button>
+            </div>
             <div class="map-stats" id="mapStats" style="display: none;">
-                <h4 data-i18n="map.stats.title">轨迹统计</h4>
                 <div id="statsContent"></div>
             </div>
         </div>

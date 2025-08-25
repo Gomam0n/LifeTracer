@@ -48,8 +48,17 @@ window.LANG_DATA = {
     map: {
         title: "生平轨迹地图",
         loading: "地图加载中...",
+        toggle_stats: "显示坐标信息",
+        hide_stats: "隐藏坐标信息",
         error: "地图加载失败",
         noData: "暂无轨迹数据",
+        coordinate_details: "坐标详细信息",
+        trajectory_statistics: "轨迹统计",
+        total_points: "总坐标点数",
+        total_distance: "总距离",
+        start_point: "起点",
+        end_point: "终点",
+        via_point: "途经",
         stats: {
             title: "轨迹统计",
             totalLocations: "总地点数：{count} 个",

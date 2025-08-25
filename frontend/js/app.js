@@ -209,3 +209,119 @@ window.addEventListener('load', function () {
 
 // 地图初始化标志
 let mapInitialized = false;
+
+// 切换坐标点详细信息显示/隐藏
+function toggleStats() {
+    const statsDiv = document.getElementById('mapStats');
+    const toggleBtn = document.getElementById('statsToggleBtn');
+    
+    if (statsDiv.style.display === 'none' || statsDiv.style.display === '') {
+        // 显示坐标点详细信息
+        displayCoordinateDetails();
+        statsDiv.style.display = 'block';
+        toggleBtn.classList.add('active');
+        toggleBtn.setAttribute('data-i18n', 'map.hide_stats');
+        // 更新按钮文本
+        const hideText = i18n.t('map.hide_stats');
+        toggleBtn.textContent = hideText;
+    } else {
+        statsDiv.style.display = 'none';
+        toggleBtn.classList.remove('active');
+        toggleBtn.setAttribute('data-i18n', 'map.toggle_stats');
+        // 更新按钮文本
+        const showText = i18n.t('map.toggle_stats');
+        toggleBtn.textContent = showText;
+    }
+}
+
+// 计算两点间距离（单位：公里）
+function calculateDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371; // 地球半径（公里）
+    const dLat = deg2rad(lat2 - lat1);
+    const dLng = deg2rad(lng2 - lng1);
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+// 角度转弧度
+function deg2rad(deg) {
+    return deg * (Math.PI/180);
+}
+
+// 显示坐标点详细信息
+function displayCoordinateDetails() {
+    const statsContainer = document.getElementById('statsContent');
+    if (!statsContainer || !lifeTracerMap || !lifeTracerMap.currentData) {
+        return;
+    }
+    
+    const data = lifeTracerMap.currentData;
+    const coordinates = data.coordinates;
+    const descriptions = data.descriptions;
+    
+    // 计算总距离
+    let totalDistance = 0;
+    for (let i = 0; i < coordinates.length - 1; i++) {
+        const [lng1, lat1] = coordinates[i];
+        const [lng2, lat2] = coordinates[i + 1];
+        totalDistance += calculateDistance(lat1, lng1, lat2, lng2);
+    }
+    
+    const title = i18n.t('map.coordinate_details');
+    const totalPointsLabel = i18n.t('map.total_points');
+    const totalDistanceLabel = i18n.t('map.total_distance');
+    
+    let html = `<h4>${title}</h4>`;
+    
+    // 添加统计信息
+    html += `
+        <div class="trajectory-stats">
+            <div class="stats-item">
+                <span class="stats-label">${totalPointsLabel}:</span>
+                <span class="stats-value">${coordinates.length}</span>
+            </div>
+            <div class="stats-item">
+                <span class="stats-label">${totalDistanceLabel}:</span>
+                <span class="stats-value">${totalDistance.toFixed(2)} km</span>
+            </div>
+        </div>
+    `;
+    
+    html += '<div class="coordinate-list">';
+    
+    coordinates.forEach((coord, index) => {
+        const [lng, lat] = coord;
+        const description = descriptions[index] || `位置 ${index + 1}`;
+        const isStart = index === 0;
+        const isEnd = index === coordinates.length - 1;
+        
+        let typeLabel = '';
+        if (isStart) {
+            typeLabel = i18n.t('map.start_point');
+        } else if (isEnd) {
+            typeLabel = i18n.t('map.end_point');
+        } else {
+            typeLabel = i18n.t('map.via_point');
+        }
+        
+        html += `
+            <div class="coordinate-item ${isStart ? 'start' : ''} ${isEnd ? 'end' : ''}">
+                <div class="coordinate-header">
+                    <span class="coordinate-number">${index + 1}</span>
+                    <span class="coordinate-type">${typeLabel}</span>
+                </div>
+                <div class="coordinate-description">${description}</div>
+                <div class="coordinate-position">
+                    <span class="coordinate-label">${i18n.currentLang === 'zh-CN' ? '坐标' : 'Coordinates'}:</span>
+                    <span class="coordinate-value">[${lat.toFixed(4)}, ${lng.toFixed(4)}]</span>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    statsContainer.innerHTML = html;
+}
